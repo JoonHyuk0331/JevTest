@@ -4,6 +4,7 @@ import aQute.bnd.annotation.jpms.Open;
 import com.example.jevclassifier.dto.ClassificationItem;
 import com.example.jevclassifier.dto.ClassificationRequest;
 import com.example.jevclassifier.dto.ClassificationResponse;
+import com.example.jevclassifier.dto.DepartmentItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ public class ClassificationService {
 
     private final DepartmentService departmentService;
     private final OpenAIService openAIService;
+    private final JevService jevService;
 
     public ClassificationResponse callLLM(ClassificationRequest req){
 
@@ -36,6 +38,40 @@ public class ClassificationService {
         }
 
         return new ClassificationResponse(classificationItemList);
+    }
+
+    public ClassificationResponse callJev(ClassificationRequest req){
+        List<DepartmentItem> departments = departmentService.getDepartmentList();
+        List<ClassificationItem> items = new ArrayList<>();
+
+        double threshold = 0.65;
+
+        for (String context : req.getContexts()) {
+            List<Double> probabilities = jevService.classify(context, departments);
+            List<String> matchedNames = new ArrayList<>();
+            double highestMatchedProbability = 0.0;
+
+            for (int i = 0; i < departments.size(); i++) {
+                double probability = probabilities.get(i);
+                if (probability >= threshold) {
+                    matchedNames.add(departments.get(i).departmentName());
+                    highestMatchedProbability =
+                            Math.max(highestMatchedProbability, probability);
+                }
+            }
+
+            String categoryName = matchedNames.isEmpty()
+                    ? "판별불가"
+                    : String.join(", ", matchedNames);
+
+            items.add(new ClassificationItem(
+                    context,
+                    categoryName,
+                    highestMatchedProbability
+            ));
+        }
+
+        return new ClassificationResponse(items);
     }
 
 }

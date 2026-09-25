@@ -21,9 +21,8 @@ public class ClassificationController {
         return classificationService.callLLM(req);
     }
 
-/*    @PostMapping("/classification/jev")
-    public ClassificationRequest classifyJEV(){
-
-    }*/
-
+    @PostMapping("/jev")
+    public ClassificationResponse classifyJev(@RequestBody ClassificationRequest req) {
+        return classificationService.callJev(req);
+    }
 }
