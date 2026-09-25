@@ -1,0 +1,41 @@
+package com.example.jevclassifier.service;
+
+import aQute.bnd.annotation.jpms.Open;
+import com.example.jevclassifier.dto.ClassificationItem;
+import com.example.jevclassifier.dto.ClassificationRequest;
+import com.example.jevclassifier.dto.ClassificationResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class ClassificationService {
+
+    private final DepartmentService departmentService;
+    private final OpenAIService openAIService;
+
+    public ClassificationResponse callLLM(ClassificationRequest req){
+
+        String aiPromptStart= """
+                입력된 텍스트가 어떤 부서와 관련 있는지 분류,
+                
+                여러개의 부서와 관련있다면 부서명이 여러개일 수 있다
+                분류할만한 부서가 없다면 "판별불가" 로 출력
+                """;
+
+        String departmentInfo=departmentService.getPromptFromDepartment();// DB의 부서정보를 추가
+        String sysPrompt= aiPromptStart + departmentInfo;
+
+        List<ClassificationItem> classificationItemList=new ArrayList<>();
+        for(String context:req.getContexts()){ // context: 부서 분류가 필요한 텍스트
+            String llmOutput= openAIService.generate(context,sysPrompt);
+            classificationItemList.add(new ClassificationItem(context,llmOutput,0.0));
+        }
+
+        return new ClassificationResponse(classificationItemList);
+    }
+
+}
